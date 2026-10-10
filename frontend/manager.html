@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manager Operations Portal — CineVerse BMS</title>
+  <meta name="description"
+    content="Theater Manager operations hub for scheduling showtimes, auditing real-time seat occupancy, configuring screen auditoriums, and managing catalog.">
+
+  <!-- Core & Dashboard CSS -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+
+<body class="dashboard-layout manager-theme">
+
+  <!-- ========================================================================
+       SIDEBAR NAVIGATION
+       ======================================================================== -->
+  <aside id="dash-sidebar" class="dash-sidebar">
+    <div class="dash-sidebar-header">
+      <a href="index.html" class="dash-brand">
+        <div class="brand-icon" style="background: linear-gradient(135deg, var(--accent-purple), #6366f1);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+            <line x1="4" y1="22" x2="4" y2="15"></line>
+          </svg>
+        </div>
+        <span>CINE</span>VERSE
+      </a>
+      <span class="dash-badge manager">Manager</span>
+    </div>
+
+    <nav class="dash-sidebar-nav">
+      <a class="dash-nav-item active" data-tab="overview" onclick="switchManagerTab('overview')">
+        <span>Operations Overview</span>
+      </a>
+      <a class="dash-nav-item" data-tab="scheduler" onclick="switchManagerTab('scheduler')">
+        <span>Showtime Scheduler</span>
+      </a>
+      <a class="dash-nav-item" data-tab="occupancy" onclick="switchManagerTab('occupancy')">
+        <span>Show Bookings & Occupancy</span>
+      </a>
+      <a class="dash-nav-item" data-tab="seat-builder" onclick="switchManagerTab('seat-builder')">
+        <span>Seat Layout Builder</span>
+      </a>
+      <a class="dash-nav-item" data-tab="theaters" onclick="switchManagerTab('theaters')">
+        <span>Theaters & Screens</span>
+      </a>
+      <a class="dash-nav-item" data-tab="movies" onclick="switchManagerTab('movies')">
+        <span>Movie Catalog</span>
+      </a>
+      <a class="dash-nav-item" data-tab="counter-lookup" onclick="switchManagerTab('counter-lookup')">
+        <span>Customer & Ticket Lookup</span>
+      </a>
+
+      <div class="dash-nav-divider"></div>
+
+      <a href="admin.html" id="link-to-admin" class="dash-nav-item" style="color: #ff4b55; display: none;">
+        <span>Admin Control Center</span>
+      </a>
+      <a href="index.html" class="dash-nav-item">
+        <span>Customer Store</span>
+      </a>
+    </nav>
+
+    <div class="dash-sidebar-footer">
+      <div class="dash-user-card">
+        <div id="manager-user-avatar" class="dash-user-avatar"
+          style="background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));">M</div>
+        <div class="dash-user-info">
+          <div id="manager-user-name" class="dash-user-name">Theater Manager</div>
+          <div id="manager-user-role" class="dash-user-role">Operations Manager</div>
+        </div>
+      </div>
+      <button class="btn btn-secondary btn-sm" style="width: 100%;" onclick="handleLogout()">Sign Out</button>
+    </div>
+  </aside>
+
+  <!-- ========================================================================
+       MAIN CONTENT AREA
+       ======================================================================== -->
+  <main class="dash-main">
+    <!-- Topbar Header -->
+    <header class="dash-topbar">
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <button class="dash-mobile-toggle" onclick="toggleSidebar()">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+        <div class="dash-title-group">
+          <h1 id="tab-title">Theater Operations Hub</h1>
+          <p id="tab-subtitle">Schedule showtimes, inspect real-time cinema occupancy, and configure screen seating</p>
+        </div>
+      </div>
+
+      <div class="dash-actions">
+        <div class="dash-search-wrap">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="manager-search-input" class="dash-search-input" placeholder="Search current records..." oninput="handleManagerSearch(this.value)">
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="refreshCurrentTab()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            style="margin-right: 4px;">
+            <path d="M23 4v6h-6"></path>
+            <path d="M1 20v-6h6"></path>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+          Refresh Data
+        </button>
+        <button class="btn btn-primary btn-sm" onclick="switchManagerTab('scheduler')">
+          + Schedule Show
+        </button>
+      </div>
+    </header>
+
+    <!-- Content Container -->
+    <div class="dash-content">
+
+      <!-- ====================================================================
+           TAB 1: OPERATIONS OVERVIEW
+           ==================================================================== -->
+      <section id="view-overview" class="dash-view-tab active">
+        <!-- KPI Cards -->
+        <div class="metrics-grid">
+          <div class="metric-card purple">
+            <div class="metric-header">
+              <span class="metric-label">Today's Shows</span>
+              <div class="metric-icon-wrap" style="color: var(--accent-purple);">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              </div>
+            </div>
+            <div id="stat-m-today-shows" class="metric-val">0</div>
+            <div class="metric-sub">Active screenings scheduled today</div>
+          </div>
+
+          <div class="metric-card cyan">
+            <div class="metric-header">
+              <span class="metric-label">Managed Screens</span>
+              <div class="metric-icon-wrap" style="color: var(--accent-cyan);">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+              </div>
+            </div>
+            <div id="stat-m-screens" class="metric-val">0</div>
+            <div id="stat-m-screens-sub" class="metric-sub">Across 0 theaters</div>
+          </div>
+
+          <div class="metric-card gold">
+            <div class="metric-header">
+              <span class="metric-label">Active Movies</span>
+              <div class="metric-icon-wrap" style="color: var(--accent-gold);">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line></svg>
+              </div>
+            </div>
+            <div id="stat-m-movies" class="metric-val">0</div>
+            <div class="metric-sub">Available for scheduling</div>
+          </div>
+
+          <div class="metric-card emerald">
+            <div class="metric-header">
+              <span class="metric-label">Total Showtimes</span>
+              <div class="metric-icon-wrap" style="color: var(--accent-emerald);">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"></path></svg>
+              </div>
+            </div>
+            <div id="stat-m-total-shows" class="metric-val">0</div>
+            <div class="metric-sub">All active calendar shows</div>
+          </div>
+        </div>
+
+        <!-- Manager Quick Shortcuts -->
+        <div class="dash-panel" style="margin-top: 24px;">
+          <div class="dash-panel-header">
+            <div class="dash-panel-title">
+              <h3>Manager Quick Shortcuts</h3>
+              <p>Key operations for daily theater and audience management.</p>
+            </div>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+            <button class="btn btn-primary btn-sm" onclick="switchManagerTab('scheduler')">+ Schedule New Showtime</button>
+            <button class="btn btn-secondary btn-sm" onclick="switchManagerTab('occupancy')">Inspect Show Occupancy & Audience</button>
+            <button class="btn btn-secondary btn-sm" onclick="switchManagerTab('seat-builder')">Configure Screen Seats</button>
+            <button class="btn btn-secondary btn-sm" onclick="openManagerModal('modal-mgr-theater')">+ Register Theater</button>
+            <button class="btn btn-secondary btn-sm" onclick="openManagerModal('modal-mgr-screen')">+ Add Screen</button>
+            <button class="btn btn-secondary btn-sm" onclick="openManagerModal('modal-mgr-movie')">+ Add Movie</button>
+          </div>
+        </div>
+
+        <!-- Today's Screening Schedule Timeline -->
+        <div class="dash-panel" style="margin-top: 24px;">
+          <div class="dash-panel-header">
+            <div class="dash-panel-title">
+              <h3>Today's Scheduled Screenings</h3>
+              <p>Showtimes programmed for today with direct access to inspect attendance.</p>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="switchManagerTab('scheduler')">View Full Calendar
+              →</button>
+          </div>
+          <div class="table-wrap">
+            <table class="dash-table">
+              <thead>
+                <tr>
+                  <th>Show ID</th>
+                  <th>Movie</th>
+                  <th>Theater & Screen</th>
+                  <th>Time Slot</th>
+                  <th>Ticket Price</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="mgr-today-shows-tbody">
+                <tr>
+                  <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">Loading today's
+                    schedule...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           TAB 2: SHOWTIME SCHEDULER
+           ==================================================================== -->
+      <section id="view-scheduler" class="dash-view-tab">
+        <div style="display: grid; grid-template-columns: 420px 1fr; gap: 24px;">
+          <!-- Schedule Show Form -->
+          <div class="dash-panel" style="height: fit-content;">
+            <div class="dash-panel-header">
+              <div class="dash-panel-title">
+                <h3>Schedule New Showtime</h3>
+                <p>Assign a movie to a screen with timing and pricing.</p>
+              </div>
+            </div>
+            <form id="scheduler-form" onsubmit="handleManagerScheduleShow(event)">
+              <div class="form-group">
+                <label class="form-label">Movie *</label>
+                <select id="sch-movie-id" class="form-select" required onchange="calculateManagerEndTime()">
+                  <!-- Injected by JS -->
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Theater Screen Auditorium *</label>
+                <select id="sch-screen-id" class="form-select" required>
+                  <!-- Injected by JS -->
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Show Date *</label>
+                <input type="date" id="sch-date" class="form-input" required>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                <div class="form-group">
+                  <label class="form-label">Start Time *</label>
+                  <input type="time" id="sch-start-time" class="form-input" required
+                    onchange="calculateManagerEndTime()">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">End Time (Auto) *</label>
+                  <input type="time" id="sch-end-time" class="form-input" required>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Base Ticket Price (₹) *</label>
+                <input type="number" id="sch-price" class="form-input" required placeholder="300" min="50" step="10">
+              </div>
+              <button type="submit" class="btn btn-primary" style="width: 100%;">Program Showtime</button>
+            </form>
+          </div>
+
+          <!-- Shows List with Filters -->
+          <div class="dash-panel">
+            <div class="dash-panel-header">
+              <div class="dash-panel-title">
+                <h3>All Scheduled Showtimes</h3>
+                <p>Filter by movie, theater screen, or date.</p>
+              </div>
+              <div class="dash-toolbar">
+                <input type="date" id="sch-filter-date" class="dash-search-input" style="min-width: 160px;"
+                  onchange="filterSchedulerShows()">
+              </div>
+            </div>
+
+            <div class="table-wrap">
+              <table class="dash-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Movie</th>
+                    <th>Screen</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Price</th>
+                    <th>Audience & Seats</th>
+                  </tr>
+                </thead>
+                <tbody id="sch-all-shows-tbody">
+                  <tr>
+                    <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 40px;">Loading
+                      shows...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           TAB 3: SHOW OCCUPANCY & AUDIENCE INSPECTOR
+           ==================================================================== -->
+      <section id="view-occupancy" class="dash-view-tab">
+        <div class="dash-panel">
+          <div class="dash-panel-header">
+            <div class="dash-panel-title">
+              <h2>Real-Time Show Occupancy & Audience Inspector</h2>
+              <p>Audit seat map, booked vs available seats, and customer tickets for any screening.</p>
+            </div>
+            <div class="dash-toolbar">
+              <label class="form-label" style="margin: 0; margin-right: 8px;">Select Show:</label>
+              <select id="occupancy-show-select" class="form-select" style="min-width: 320px;"
+                onchange="loadShowOccupancyDetails()">
+                <option value="">Select a Scheduled Show...</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Show Details Summary Header -->
+          <div id="occupancy-details-banner"
+            style="display: none; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 20px; margin-bottom: 24px;">
+            <div
+              style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+              <div>
+                <h3 id="occ-movie-title" style="font-size: 1.3rem; margin-bottom: 4px;">Movie Title</h3>
+                <div id="occ-meta-info" style="color: var(--text-muted); font-size: 0.88rem;">Theater • Screen • Date •
+                  Time</div>
+              </div>
+              <div style="display: flex; gap: 24px; text-align: right;">
+                <div>
+                  <div style="font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase;">Occupancy Rate
+                  </div>
+                  <div id="occ-rate"
+                    style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 800; color: var(--accent-emerald);">
+                    0%</div>
+                </div>
+                <div>
+                  <div style="font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase;">Booked / Total
+                  </div>
+                  <div id="occ-ratio"
+                    style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 800; color: var(--accent-cyan);">
+                    0 / 0</div>
+                </div>
+                <div>
+                  <div style="font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase;">Show Revenue</div>
+                  <div id="occ-revenue"
+                    style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 800; color: var(--accent-gold);">
+                    ₹0</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Visual Cinema Seat Map -->
+          <div id="occupancy-seatmap-wrap" style="display: none; margin-bottom: 28px;">
+            <div class="occupancy-screen-view">
+              <div class="cinema-screen-wrap" style="margin-bottom: 24px;">
+                <div class="cinema-screen"></div>
+                <div class="cinema-screen-text">Cinema Projection Screen</div>
+              </div>
+
+              <!-- Seat Grid -->
+              <div id="occupancy-seat-grid" class="manager-seat-grid">
+                <!-- Rendered by JS -->
+              </div>
+
+              <!-- Seat Legend -->
+              <div class="seat-legend" style="margin-top: 20px;">
+                <div class="legend-item">
+                  <div class="legend-swatch"
+                    style="background: rgba(245, 158, 11, 0.2); border: 1px solid var(--accent-gold);"></div>
+                  <span>VIP</span>
+                </div>
+                <div class="legend-item">
+                  <div class="legend-swatch"
+                    style="background: rgba(139, 92, 246, 0.2); border: 1px solid var(--accent-purple);"></div>
+                  <span>Premium</span>
+                </div>
+                <div class="legend-item">
+                  <div class="legend-swatch"
+                    style="background: rgba(6, 182, 212, 0.2); border: 1px solid var(--accent-cyan);"></div>
+                  <span>Regular</span>
+                </div>
+                <div class="legend-item">
+                  <div class="legend-swatch" style="background: #1e2536; border: 1px solid #334155;"></div>
+                  <span>Booked / Occupied</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Audience Bookings Roster -->
+          <div id="occupancy-bookings-wrap" style="display: none;">
+            <h3 style="font-size: 1.1rem; margin-bottom: 14px;">Audience Ticket Roster for This Screening</h3>
+            <div class="table-wrap">
+              <table class="dash-table">
+                <thead>
+                  <tr>
+                    <th>Booking ID</th>
+                    <th>Customer Name</th>
+                    <th>User ID</th>
+                    <th>Seats Allocated</th>
+                    <th>Total Price</th>
+                    <th>Status</th>
+                    <th>Counter Action</th>
+                  </tr>
+                </thead>
+                <tbody id="occupancy-bookings-tbody">
+                  <!-- Rendered by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div id="occupancy-placeholder" style="text-align: center; color: var(--text-muted); padding: 60px 20px;">
+            <div style="font-size: 2.5rem; margin-bottom: 12px;">💺</div>
+            <h3>Please Select a Showtime</h3>
+            <p>Choose any scheduled screening from the dropdown above to audit live seat occupancy and customer ticket
+              details.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           TAB 4: SCREEN & SEAT BUILDER
+           ==================================================================== -->
+      <section id="view-seat-builder" class="dash-view-tab">
+        <div style="display: grid; grid-template-columns: 380px 1fr; gap: 24px;">
+          <!-- Controls & Generator -->
+          <div style="display: flex; flex-direction: column; gap: 20px;">
+            <div class="dash-panel">
+              <div class="dash-panel-header">
+                <div class="dash-panel-title">
+                  <h3>Select Auditorium</h3>
+                  <p>Choose screen to view or generate seats.</p>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Theater Screen Auditorium</label>
+                <select id="seat-builder-screen-select" class="form-select" onchange="loadScreenSeats()">
+                  <!-- Injected by JS -->
+                </select>
+              </div>
+            </div>
+
+            <!-- Quick Auto-Seat Layout Generator -->
+            <div class="dash-panel">
+              <div class="dash-panel-header">
+                <div class="dash-panel-title">
+                  <h3>Automated Seat Generator</h3>
+                  <p>Instantly configure 32-seat standard auditorium layout (Rows A-D, Cols 1-8).</p>
+                </div>
+              </div>
+              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
+                Generates:
+                <br>• Row A & B: <strong>VIP</strong> (16 seats)
+                <br>• Row C: <strong>PREMIUM</strong> (8 seats)
+                <br>• Row D: <strong>REGULAR</strong> (8 seats)
+              </div>
+              <button class="btn btn-primary" style="width: 100%;" onclick="handleAutoGenerateSeats()">
+                ⚡ Generate & Save Layout
+              </button>
+            </div>
+
+            <!-- Single Seat Manual Creator -->
+            <div class="dash-panel">
+              <div class="dash-panel-header">
+                <div class="dash-panel-title">
+                  <h3>Add Individual Seat</h3>
+                  <p>Manually insert single seat.</p>
+                </div>
+              </div>
+              <form onsubmit="handleManualAddSeat(event)">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                  <div class="form-group">
+                    <label class="form-label">Row (Letter)</label>
+                    <input type="text" id="seat-row-input" class="form-input" required placeholder="A" maxlength="2">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Column (Number)</label>
+                    <input type="number" id="seat-col-input" class="form-input" required placeholder="1" min="1"
+                      max="50">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Seat Identifier</label>
+                  <input type="text" id="seat-number-input" class="form-input" required placeholder="e.g. A1">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Seat Tier</label>
+                  <select id="seat-type-input" class="form-select" required>
+                    <option value="VIP">VIP</option>
+                    <option value="PREMIUM">PREMIUM</option>
+                    <option value="REGULAR">REGULAR</option>
+                  </select>
+                </div>
+                <button type="submit" class="btn btn-secondary" style="width: 100%;">Add Seat to Screen</button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Visual Layout & Existing Seats -->
+          <div class="dash-panel">
+            <div class="dash-panel-header">
+              <div class="dash-panel-title">
+                <h3 id="seat-builder-header">Screen Seating Layout</h3>
+                <p id="seat-builder-sub">Currently configured physical seats in this auditorium.</p>
+              </div>
+              <div id="seat-counts-summary" style="font-size: 0.85rem; font-weight: 700; color: var(--accent-cyan);">
+                0 Seats Total
+              </div>
+            </div>
+
+            <div class="occupancy-screen-view">
+              <div class="cinema-screen-wrap" style="margin-bottom: 24px;">
+                <div class="cinema-screen"></div>
+                <div class="cinema-screen-text">Cinema Projection Screen</div>
+              </div>
+
+              <!-- Seat Visual Grid -->
+              <div id="screen-seats-grid" class="manager-seat-grid">
+                <div style="color: var(--text-muted); padding: 40px;">Select a screen auditorium on the left to inspect
+                  seat map.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           TAB 5: THEATERS & SCREENS
+           ==================================================================== -->
+      <section id="view-theaters" class="dash-view-tab">
+        <div class="dash-panel">
+          <div class="dash-panel-header">
+            <div class="dash-panel-title">
+              <h2>Cinema Theaters & Auditoriums</h2>
+              <p>Register new theaters or add screens to expand seating capacity.</p>
+            </div>
+            <div class="dash-toolbar">
+              <button class="btn btn-secondary btn-sm" onclick="openManagerModal('modal-mgr-theater')">+ Add
+                Theater</button>
+              <button class="btn btn-primary btn-sm" onclick="openManagerModal('modal-mgr-screen')">+ Add
+                Screen</button>
+            </div>
+          </div>
+
+          <div id="mgr-theaters-container"
+            style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
+            <!-- Injected by JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           TAB 6: MOVIE CATALOG
+           ==================================================================== -->
+      <section id="view-movies" class="dash-view-tab">
+        <div class="dash-panel">
+          <div class="dash-panel-header">
+            <div class="dash-panel-title">
+              <h2>Movie Catalog for Programming</h2>
+              <p>Add new titles or update runtime details for scheduling.</p>
+            </div>
+            <div class="dash-toolbar">
+              <button class="btn btn-primary btn-sm" onclick="openManagerModal('modal-mgr-movie')">+ Add Movie</button>
+            </div>
+          </div>
+
+          <div id="mgr-movies-container" class="movie-manage-grid">
+            <!-- Injected by JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           TAB 7: CUSTOMER & TICKET LOOKUP
+           ==================================================================== -->
+      <section id="view-counter-lookup" class="dash-view-tab">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+          <!-- Lookup Customer by ID -->
+          <div class="dash-panel">
+            <div class="dash-panel-header">
+              <div class="dash-panel-title">
+                <h3>Customer Profile Lookup</h3>
+                <p>Lookup registered customer by User ID.</p>
+              </div>
+            </div>
+            <form onsubmit="handleLookupUser(event)">
+              <div class="form-group">
+                <label class="form-label">User ID Number</label>
+                <div style="display: flex; gap: 10px;">
+                  <input type="number" id="lookup-user-id" class="form-input" required placeholder="e.g. 1" min="1">
+                  <button type="submit" class="btn btn-primary">Search</button>
+                </div>
+              </div>
+            </form>
+            <div id="user-lookup-result" style="margin-top: 16px;"></div>
+          </div>
+
+          <!-- Lookup Booking by ID -->
+          <div class="dash-panel">
+            <div class="dash-panel-header">
+              <div class="dash-panel-title">
+                <h3>Booking Ticket Lookup</h3>
+                <p>Lookup booking details and verify QR/ticket code.</p>
+              </div>
+            </div>
+            <form onsubmit="handleLookupBooking(event)">
+              <div class="form-group">
+                <label class="form-label">Booking ID Number</label>
+                <div style="display: flex; gap: 10px;">
+                  <input type="number" id="lookup-booking-id" class="form-input" required placeholder="e.g. 1" min="1">
+                  <button type="submit" class="btn btn-primary">Search</button>
+                </div>
+              </div>
+            </form>
+            <div id="booking-lookup-result" style="margin-top: 16px;"></div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ========================================================================
+       MODALS
+       ======================================================================== -->
+
+  <!-- Add Theater Modal -->
+  <div id="modal-mgr-theater" class="modal-overlay">
+    <div class="dash-modal-dialog">
+      <div class="dash-modal-header">
+        <h3>Register New Cinema Theater</h3>
+        <button class="dash-modal-close" onclick="closeManagerModal('modal-mgr-theater')">✕</button>
+      </div>
+      <form onsubmit="handleManagerCreateTheater(event)">
+        <div class="dash-modal-body">
+          <div class="form-group">
+            <label class="form-label">Theater Brand / Name *</label>
+            <input type="text" id="mgr-th-name" class="form-input" required placeholder="e.g. Cinepolis VIP Multiplex">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Address / Mall Location *</label>
+            <input type="text" id="mgr-th-address" class="form-input" required placeholder="e.g. Forum Mall, 4th Floor">
+          </div>
+          <div class="form-group">
+            <label class="form-label">City *</label>
+            <select id="mgr-th-city-id" class="form-select" required>
+              <!-- Injected by JS -->
+            </select>
+          </div>
+        </div>
+        <div class="dash-modal-footer">
+          <button type="button" class="btn btn-secondary"
+            onclick="closeManagerModal('modal-mgr-theater')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Theater</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Screen Modal -->
+  <div id="modal-mgr-screen" class="modal-overlay">
+    <div class="dash-modal-dialog">
+      <div class="dash-modal-header">
+        <h3>Create Screen / Auditorium</h3>
+        <button class="dash-modal-close" onclick="closeManagerModal('modal-mgr-screen')">✕</button>
+      </div>
+      <form onsubmit="handleManagerCreateScreen(event)">
+        <div class="dash-modal-body">
+          <div class="form-group">
+            <label class="form-label">Screen Auditorium Name *</label>
+            <input type="text" id="mgr-sc-name" class="form-input" required placeholder="e.g. Audi 1 (Dolby Atmos)">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Theater *</label>
+            <select id="mgr-sc-theater-id" class="form-select" required>
+              <!-- Injected by JS -->
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Total Seat Capacity *</label>
+            <input type="number" id="mgr-sc-total-seats" class="form-input" required placeholder="32" min="1" max="500">
+          </div>
+        </div>
+        <div class="dash-modal-footer">
+          <button type="button" class="btn btn-secondary"
+            onclick="closeManagerModal('modal-mgr-screen')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Screen</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add / Edit Movie Modal -->
+  <div id="modal-mgr-movie" class="modal-overlay">
+    <div class="dash-modal-dialog">
+      <div class="dash-modal-header">
+        <h3 id="mgr-movie-modal-title">Add Movie to Program</h3>
+        <button class="dash-modal-close" onclick="closeManagerModal('modal-mgr-movie')">✕</button>
+      </div>
+      <form id="mgr-movie-form" onsubmit="handleManagerSaveMovie(event)">
+        <input type="hidden" id="mgr-movie-edit-id">
+        <div class="dash-modal-body">
+          <div class="form-group">
+            <label class="form-label">Movie Title *</label>
+            <input type="text" id="mgr-movie-title" class="form-input" required placeholder="e.g. Movie Title">
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div class="form-group">
+              <label class="form-label">Genre *</label>
+              <input type="text" id="mgr-movie-genre" class="form-input" required placeholder="e.g. Sci-Fi">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Language *</label>
+              <input type="text" id="mgr-movie-lang" class="form-input" required placeholder="e.g. English">
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div class="form-group">
+              <label class="form-label">Duration (Minutes) *</label>
+              <input type="number" id="mgr-movie-duration" class="form-input" required placeholder="166" min="30"
+                max="360">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Rating (0 - 10) *</label>
+              <input type="number" step="0.1" id="mgr-movie-rating" class="form-input" required placeholder="8.6"
+                min="0" max="10">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Release Date *</label>
+            <input type="date" id="mgr-movie-release-date" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Poster Image URL *</label>
+            <input type="url" id="mgr-movie-poster" class="form-input" required
+              placeholder="https://images.unsplash.com/...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <textarea id="mgr-movie-desc" class="form-textarea" rows="3" placeholder="Plot synopsis..."></textarea>
+          </div>
+        </div>
+        <div class="dash-modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeManagerModal('modal-mgr-movie')">Cancel</button>
+          <button type="submit" id="mgr-movie-submit-btn" class="btn btn-primary">Save Movie</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Role Guard Modal -->
+  <div id="modal-mgr-auth-guard" class="modal-overlay">
+    <div class="dash-modal-dialog" style="max-width: 440px;">
+      <div class="dash-modal-header" style="border-bottom: none; text-align: center; justify-content: center;">
+        <h3 style="color: var(--accent-purple);">🔒 Manager Access Required</h3>
+      </div>
+      <div class="dash-modal-body" style="text-align: center;">
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">
+          You must be logged in as a <strong>MANAGER</strong> (or ADMIN) to access theater operations.
+        </p>
+
+        <form onsubmit="handleManagerLogin(event)">
+          <div class="form-group" style="text-align: left;">
+            <label class="form-label">Manager / Admin Email</label>
+            <input type="email" id="mgr-guard-email" class="form-input" required placeholder="manager@example.com">
+          </div>
+          <div class="form-group" style="text-align: left;">
+            <label class="form-label">Password</label>
+            <input type="password" id="mgr-guard-password" class="form-input" required placeholder="••••••••">
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">
+            Sign In to Operations Portal
+          </button>
+        </form>
+
+        <div style="margin-top: 16px; border-top: 1px solid var(--border-subtle); padding-top: 16px;">
+          <a href="index.html" class="btn btn-secondary btn-sm" style="width: 100%;">Return to Customer Home</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="js/api.js"></script>
+  <script src="js/manager.js"></script>
+</body>
+
+</html>
